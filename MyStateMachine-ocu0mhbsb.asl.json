@@ -1,0 +1,78 @@
+{
+    "Comment": "Move files from landing -> raw -> refined -> processed, with a check for new files",
+    "StartAt": "CheckLandingPath",
+    "States": {
+        "CheckLandingPath": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:ap-south-1:442116323705:function:checklandingdata",
+            "Parameters": {
+                "landingbucket.$": "$.landingbucket",
+                "landingzone.$": "$.landingzone",
+                "tablename.$": "$.tablename",
+                "rawzone.$": "$.rawzone",
+                "refinedzone.$": "$.refinedzone",
+                "processedzone.$": "$.processedzone"
+            },
+            "ResultPath": "$.landingCheck",
+            "Next": "AreFilesInLanding?"
+        },
+        "AreFilesInLanding?": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Variable": "$.landingCheck.filesExist",
+                    "BooleanEquals": true,
+                    "Next": "MoveToRaw"
+                }
+            ],
+            "Default": "NoFilesInLanding"
+        },
+        "MoveToRaw": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:ap-south-1:442116323705:function:landingtoraw",
+            "Parameters": {
+                "landingbucket.$": "$.landingbucket",
+                "landingzone.$": "$.landingzone",
+                "tablename.$": "$.tablename",
+                "rawzone.$": "$.rawzone",
+                "refinedzone.$": "$.refinedzone",
+                "processedzone.$": "$.processedzone",
+                "columnstring.$": "$.columnstring"
+            },
+            "Next": "MoveToRefined"
+        },
+        "MoveToRefined": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:ap-south-1:442116323705:function:rawtorefined",
+            "Parameters": {
+                "landingbucket.$": "$.landingbucket",
+                "landingzone.$": "$.landingzone",
+                "tablename.$": "$.tablename",
+                "rawzone.$": "$.rawzone",
+                "refinedzone.$": "$.refinedzone",
+                "processedzone.$": "$.processedzone",
+                "columnstring.$": "$.columnstring"
+            },
+            "Next": "MoveToProcessed"
+        },
+        "MoveToProcessed": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:ap-south-1:442116323705:function:refinedtoprocessed",
+            "Parameters": {
+                "landingbucket.$": "$.landingbucket",
+                "landingzone.$": "$.landingzone",
+                "tablename.$": "$.tablename",
+                "rawzone.$": "$.rawzone",
+                "refinedzone.$": "$.refinedzone",
+                "processedzone.$": "$.processedzone",
+                "columnstring.$": "$.columnstring"
+            },
+            "End": true
+        },
+        "NoFilesInLanding": {
+            "Type": "Fail",
+            "Error": "NoFilesInLandingError",
+            "Cause": "No files found in the landing path."
+        }
+    }
+}
